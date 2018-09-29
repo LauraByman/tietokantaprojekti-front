@@ -43,22 +43,21 @@
             infoWindow.setContent('Your current location.');
             infoWindow.open(map);
             map.setCenter(pos);
-            //searchPlaces(pos);
+            searchPlaces(pos);
           }
       }
       
       
       //etsitään valittuja palveluita
-      function searchPlaces(serviceType) {
+      function searchPlaces(pos) {
         
         /*määritetään haun ominaisuudet*/
         let request = {
             location: pos,
             radius: 8000,
-            type: serviceType
+            type: placesTest.service
         };
         
-        console.log('tyyppi', serviceType)
         let service = new google.maps.places.PlacesService(map);
         
         service.nearbySearch(request, callback);
