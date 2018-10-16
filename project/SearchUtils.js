@@ -1,10 +1,24 @@
       let map, infoWindow, pos;
+      let global_map_radius = 2000;
+      
+      function getZoomLevel() {
+
+        let radius = global_map_radius
+        let scale = radius / 500;
+        let zoomLevel = Math.round(16 - Math.log(scale) / Math.log(2));
+        
+        return zoomLevel;
+        }
       
       //piirretään kartta
       function initMap() {
+        
+        let zoomLevel = getZoomLevel();
+        
+        
         map = new google.maps.Map(document.getElementById('map'), {
           center: {lat: -34.397, lng: 150.644},
-          zoom: 15
+          zoom: zoomLevel
         });
         infoWindow = new google.maps.InfoWindow;
 
@@ -15,6 +29,7 @@
         }else {
           handleLocationError(false, infoWindow, map.getCenter());
         }
+      }
       
       function handleLocationError(browserHasGeolocation, infoWindow, pos) {
         infoWindow.setPosition(pos);
@@ -45,20 +60,20 @@
             map.setCenter(pos);
             //searchPlaces(pos);
           }
-      }
       
       
+      
+      let onFailure_local //muuttuja on failure callbackin handlea varten
       //etsitään valittuja palveluita
-      function searchPlaces(serviceType) {
-        
+       async function searchPlaces(serviceType, radius,onFailureCallback) {
+        onFailure_local = onFailureCallback
         /*määritetään haun ominaisuudet*/
         let request = {
             location: pos,
-            radius: 8000,
+            radius: radius,
             type: serviceType
         };
         
-        console.log('tyyppi', serviceType)
         let service = new google.maps.places.PlacesService(map);
         
         service.nearbySearch(request, callback);
@@ -68,10 +83,16 @@
       //haetaan lähellä olevat palvelut
       function callback(results, status) {
           if(status == google.maps.places.PlacesServiceStatus.OK) {
+            
+              
               for(var i = 0; i < results.length; i++) {
                   createMarker(results[i]);
               }
-          }//tarvitaanko catch error tähän?
+          }else {
+                // jos tuloksia 0 palautetaan viite onFailureCallback funktioon
+                onFailure_local()
+
+          }
       }
       
       
@@ -106,6 +127,37 @@
       });
       }
       
+      function getAsyncPosInfo(location) {
+        var geocoder = new google.maps.Geocoder;
+        return new Promise(function(resolve, reject) {
+          geocoder.geocode(location, resolve);
+        });
+      }
+  
+      //get address and other info for database
+      async function getPositionInformation(){
+        
+        var latlng = {lat: parseFloat(pos.lat), lng: parseFloat(pos.lng)};
+        var geocoder = new google.maps.Geocoder;
+        
+  
+        
+        
+        const result = await getAsyncPosInfo({'location': latlng})
+        
+        return handleLocationResults(result)   
+        
+      }
+      
+      function handleLocationResults(results) {
+          if (results[0]) {
+              console.log('address', results[0])
+              return results[0];
+          } else {
+            return -1;
+          }
+        }
+        
       function makePopUpWindow(url) {
          window.open(url,'popUpWindow','height=800,width=800,left=100,top=100,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no, status=yes');
       }

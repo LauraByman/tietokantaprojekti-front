@@ -20,7 +20,7 @@
     <h1>Search Services: </h1>
     <form>
   	  <select type="option" id="serviceType">
-  	  <option selected disabled>Choose a service type</option>
+  	  <option value='' selected disabled>Choose service type</option>
   		<option value='accounting'>accounting</option>
   		<option value='airport'>airport</option>
   		<option value='amusement_park'>amusement park</option>
@@ -111,9 +111,12 @@
   		<option value='travel_agency'>travel agency</option>
   		<option value='veterinary_care'>veterinary care</option>
   		<option value='zoo'>zoo</option>
-	    </select>
-	<input type="submit" value="Submit" id="clickButton" onClick="handleOnClick()"/>
+	    </select><br></br>
+	     Search radius as meters: <input type="text" id="radius"></input>
+	    <br></br>
+	    <input type="submit" value="Submit" id="clickButton" onClick="handleOnClick()"/>
   </form>
+  <div id="handleError"></div>
   <br></br>
   
 <script> 
@@ -122,16 +125,111 @@
   //estetään sivun uudelleenlataus submitin jälkeen
   document.getElementById("clickButton").addEventListener("click", function(event){
     event.preventDefault()
+    
   });
   
   //onClick => searchPlaces
-  function handleOnClick() {
+  async function handleOnClick() {
     
+    document.getElementById("handleError").innerHTML = "";
     var serviceType = document.getElementById("serviceType").value;
-    console.log('service', serviceType)
+    let radius = document.getElementById("radius").value;
     
-  	searchPlaces(serviceType)
+    
+    //hnadle incorrect values
+    if(serviceType == '') {
+      document.getElementById("handleError").innerHTML = "Please select a service to be searched.";
+      return
+    }
+    
+    if (radius < 100 || radius > 20000) {
+       document.getElementById("handleError").innerHTML = "Radius must be at least 100 meters and 20 000 meters at maximum";
+       return
+    }
+    
+    //määritetään oikea zoom taso karttaan
+    global_map_radius = radius
+    initMap()
+    
+    //on failure ajetaan jos tuloksia 0
+    const onFailureCallback = () => {
+      document.getElementById("handleError").innerHTML = "No results found, please try a larger search radius"
+    }
+    
+    //etsitään palveluita
+  	searchPlaces(serviceType, radius, onFailureCallback)
+ 
+  	//lähetetään tietokantaan
+     sendToDatabase(radius)
+  	
   }
+  
+  //kootaan sijaintitiedot lähetettäväksi tietokantaan
+  async function sendToDatabase(radius){
+    
+    //get current timestamp
+    var dt = new Date();
+    var utcDate = dt.toUTCString();
+    
+    //kysytään location info ja osotetaan että info palautuu
+    let locationinfo = await getPositionInformation();
+    console.log('Locationinfo:',locationinfo)
+    
+   //save address, city, postalcode, country
+    var components=locationinfo.address_components;
+    for (var component=0;component<(components.length);component++){
+      if(components[component].types[0]=="street_number"){
+          var streetNumber=components[component].long_name;
+      }
+    }
+    for (var component=0;component<(components.length);component++){
+      if(components[component].types[0]=="route"){
+          var route=components[component].long_name;
+      }
+    }
+    for (var component=0;component<(components.length);component++){
+      if(components[component].types[0]=="locality"){
+          var city=components[component].long_name;
+      }
+    }
+    for (var component=0;component<(components.length);component++){
+      if(components[component].types[0]=="country"){
+          var country=components[component].long_name;
+      }
+    }
+    for (var component=0;component<(components.length);component++){
+      if(components[component].types[0]=="postal_code"){
+          var postal_code=components[component].long_name;
+      }
+    }
+      
+    
+    let address = route + " " + streetNumber
+    
+    //luodaan tiedot lähetettäväksi
+   	let searchInfo = {
+	  distance: radius,
+	  dateAndTime: utcDate,
+	  lat: pos.lat,
+	  long: pos.lng,
+	  serviceType: document.getElementById("serviceType").value,
+	  address: address,
+	  city: city,
+	  postal_code: postal_code,
+	  country: country
+	  //results: [ {}, {}, {}] //results toteutus kesken
+	    
+	  
+   	}
+     	
+   	console.log('searchInfo', searchInfo)
+   	
+   	//lähetetään luotu objekti
+     	
+  }
+  	
+  //	
+  
 </script>
     <div id="map"></div>
     
