@@ -42,31 +42,28 @@
       
       //Jos sijainti löytyy kohdistetaan kartta ja tallennetaan koordinaatit.
       function setAndSavePosition(position) {
-            pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            let myLocationMarker = new google.maps.Marker({
-              map: map,
-              position: new google.maps.LatLng(pos.lat, pos.lng) 
-            });
-            
-            //vihreä ikoni => oma sijainti
-            myLocationMarker.setIcon('https://maps.google.com/mapfiles/ms/icons/green-dot.png');
-            myLocationMarker.setMap(map);
-            infoWindow.setPosition(pos);
-            infoWindow.setContent('Your current location.');
-            infoWindow.open(map);
-            map.setCenter(pos);
-            //searchPlaces(pos);
-          }
+        pos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        let myLocationMarker = new google.maps.Marker({
+          map: map,
+          position: new google.maps.LatLng(pos.lat, pos.lng) 
+        });
+        
+        //vihreä ikoni => oma sijainti
+        myLocationMarker.setIcon('https://maps.google.com/mapfiles/ms/icons/green-dot.png');
+        myLocationMarker.setMap(map);
+        infoWindow.setPosition(pos);
+        infoWindow.setContent('Your current location.');
+        infoWindow.open(map);
+        map.setCenter(pos);
+        //searchPlaces(pos);
+      }
       
       
-      
-      let onFailure_local //muuttuja on failure callbackin handlea varten
-      //etsitään valittuja palveluita
-       async function searchPlaces(serviceType, radius,onFailureCallback) {
-        onFailure_local = onFailureCallback
+
+      async function searchPlaces(serviceType, radius) {
         /*määritetään haun ominaisuudet*/
         let request = {
             location: pos,
@@ -74,27 +71,24 @@
             type: serviceType
         };
         
+        let results = await getAsyncServicesInfo(request) ; 
+        console.log('tulokset', results)
+        //luodaan service markerit kartalle
+      //if(status == google.maps.places.PlacesServiceStatus.OK) {  
+      for(var i = 0; i < results.length; i++) {
+            createMarker(results[i]);
+        }
+        
+        return results;
+      }
+      
+      //haetaan palvelut
+      function getAsyncServicesInfo(request) {
         let service = new google.maps.places.PlacesService(map);
-        
-        service.nearbySearch(request, callback);
-        
+        return new Promise(function(resolve, reject) {
+           service.nearbySearch(request, resolve);
+        });
       }
-      
-      //haetaan lähellä olevat palvelut
-      function callback(results, status) {
-          if(status == google.maps.places.PlacesServiceStatus.OK) {
-            
-              
-              for(var i = 0; i < results.length; i++) {
-                  createMarker(results[i]);
-              }
-          }else {
-                // jos tuloksia 0 palautetaan viite onFailureCallback funktioon
-                onFailure_local()
-
-          }
-      }
-      
       
       //luodaan googleMarker kartalle palvelun kordinaatteihin
       function createMarker(place) {
@@ -136,27 +130,20 @@
   
       //get address and other info for database
       async function getPositionInformation(){
-        
         var latlng = {lat: parseFloat(pos.lat), lng: parseFloat(pos.lng)};
         var geocoder = new google.maps.Geocoder;
-        
-  
-        
-        
         const result = await getAsyncPosInfo({'location': latlng})
-        
         return handleLocationResults(result)   
-        
       }
       
       function handleLocationResults(results) {
-          if (results[0]) {
-              console.log('address', results[0])
-              return results[0];
-          } else {
-            return -1;
-          }
+        if (results[0]) {
+            console.log('address', results[0])
+            return results[0];
+        } else {
+          return -1;
         }
+      }
         
       function makePopUpWindow(url) {
          window.open(url,'popUpWindow','height=800,width=800,left=100,top=100,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no, status=yes');
